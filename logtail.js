@@ -4,7 +4,8 @@ var //http = require('http'),
     spawn = require('child_process').spawn,
     express = require('express'),
     app = express.createServer(),
-    io = require('socket.io').listen(app);
+    io = require('socket.io').listen(app),
+    _ = require('underscore')._ ;
 
 app.set('views', __dirname + '/views');
 app.set('view engine', 'jade');
@@ -22,29 +23,30 @@ app.get('/', function(req, res) {
 
 
 var logs = {
-  'benbuckman': '/var/log/apache2/access.log'  /*,
+  'benbuckman': '/var/log/apache2/access.log',
   'newleafdigital': '/var/log/apache2/access-newleafdigital.log',
   'thebuckmans': '/var/log/apache2/access-thebuckmans.com',
   'stephaniegarlow': '/var/log/apache2/access-stephaniegarlow.com.log',
   'phpbakeoff': '/var/log/apache2/access-phpbakeoff.newleafdigital.com.log'
-  */
 };
 
 var processPool = {};
 
-var startProcesses = function() {
+var startProcesses = function(callback) {
   console.log('Starting processes.');
 
-  logs.each(function(key, path) {
+  _(logs).each(function(path, key) {
     console.log('starting process ' + key + ' at ' + path);
-    processPool.key = spawn('tail', ['-f', path ]);
+    processPool[key] = spawn('tail', ['-f', path ]);
   });
+
+  callback(processPool);
 };
 
 var killProcesses = function() {
   console.log('Killing processes.');
 
-  processPool.each(function(key, process) {
+  _(processPool).each(function(process, key) {
     process.kill();
     delete processPool.key;
     console.log('killed process ' + key);
@@ -55,19 +57,23 @@ var killProcesses = function() {
 var tail = io
   .of('/tail')
   .on('connection', function(socket) {
+    console.log('new socket.');
 
-    startProcesses();
+    startProcesses(function(processPool) {
+      _(processPool).each(function(process, key) {
+        console.log('got back process ' + key);
+        process.stdout.on('data', function(data) {
+          socket.emit('log', { 'log': key, 'msg': data.toString('utf-8'), type: 'stdout' });
+        });
+        // todo : handle stderr too
+      });
+    });
 
     tail.on('disconnect', function() {
       killProcesses();
     });
 
-    processPool.each(function(key, process) {
-      socket.emit('log', { 'log': key, 'msg': data.toString('utf-8').split("\n"), type: 'stdout' });
-    });
-
-    // todo : handle stderr too
-  });
+ });
 
 
 /*

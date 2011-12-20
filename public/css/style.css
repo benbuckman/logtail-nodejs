@@ -1,0 +1,17 @@
+
+#stream {
+  font-family: helvetica,sans-serif;
+  font-size: 10pt;
+  font-weight: normal;
+}
+.stdout {
+  color: #000;
+}
+.stderr {
+  color: red;
+}
+.log-name {
+  color: green;
+  font-weight: bold;
+  margin-right: 1em;
+}
