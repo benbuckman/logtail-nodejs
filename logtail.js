@@ -1,51 +1,28 @@
 #!/usr/bin/env node
 
-// log tailer for multiple files.
-// originally used socket_io, but now just in terminal.
+// log tailer for multiple files, as a shell script
 
-var //http = require('http')
-  //,
-    spawn = require('child_process').spawn
-  //, express = require('express')
-  //, app = express.createServer()
-  //, io = require('socket.io').listen(app)
-  , _ = require('underscore')._
-  //, argv = require('optimist').argv
+var spawn = require('child_process').spawn
+  , _ = require('underscore')._;
 
-
-//app.set('views', __dirname + '/views');
-//app.set('view engine', 'jade');
-
-/*
-app.configure(function(){
-  app.use(app.router);
-  app.use(express.static(__dirname + '/public'));
-});
-
-
-app.get('/', function(req, res) {
-  res.render('index', {}); 
-});
-*/
 
 var logs = {}, key, file;
+
+// parse files to tail (see usage below)
 var selfPath = process.argv.shift();
   if (selfPath == 'node') selfPath = process.argv.shift();
 
 process.argv.forEach(function(arg, index, ar) {
-//  console.log(arg); //, index, ar);
-
-  split = arg.split(':');
+  var split = arg.split(':');
   file = split.pop();
   key = split.length ? split.pop() : file;
   logs[key] = file;
-
-//  console.log('added', key, file, logs);
 });
 
 // none requested?
 if (_.isEmpty(logs)) {
-  process.stdout.write("USAGE: " + selfPath + " key:file key:file file file ...\n" + "e.g. " + selfPath + " errors:./error.log out:./out.log other.log\n");
+  process.stdout.write("USAGE: " + selfPath + " key:file key:file file file ...\n" + "e.g. " + selfPath +
+      " errors:./error.log out:./out.log other.log\n");
   process.exit();
 }
 
@@ -75,31 +52,22 @@ var killProcesses = function() {
   });
 };
 
-/*
-var tail = io
-  .of('/tail')
-  .on('connection', function(socket) {
-    console.log('new socket.');
-*/
-    startProcesses(function(processPool) {
-      _(processPool).each(function(process, key) {
-        //console.log('Initialized process ' + key);
-        process.stdout.on('data', function(data) {
-          //socket.emit('log', { 'log': key, 'msg': data.toString('utf-8'), type: 'stdout' });
+startProcesses(function(processPool) {
+  _(processPool).each(function(process, key) {
+    //console.log('Initialized process ' + key);
+    process.stdout.on('data', function(data) {
+      //socket.emit('log', { 'log': key, 'msg': data.toString('utf-8'), type: 'stdout' });
 
-          console.log('['+key+'] ', data.toString()); 
-        });
-        // todo : handle stderr too
-      });
+      console.log('['+key+'] ', data.toString()); 
     });
+    // todo : handle stderr too
+  });
+});
 
-    //tail.on('disconnect', function() {
-    process.on('exit', function() {
-      console.warn('Caught EXIT.');
-      killProcesses();
-    });
-
-// });
+process.on('exit', function() {
+  console.warn('Caught EXIT.');
+  killProcesses();
+});
 
 
 process.on('uncaughtException', function(err) {
@@ -111,33 +79,5 @@ process.on('uncaughtException', function(err) {
 // keep running until exited!
 // while(1) maxes out the cpu...
 // so set an arbitrary interval to keep running
+// (is there a better way to do this?)
 setInterval(function(){}, 60000);
-
-
-/*
-app.get('/tail', function(req, res) {
-  //res.writeHead(200, {
-  //  'Content-Type': 'text/plain'
-  //});
-
-  res.write('Streaming...\n');
-
-  var tail_child = spawn('tail', ['-f', '/var/log/apache2/access.log' ]);
-
-  req.connection.on('end', function() {
-    tail_child.kill();
-  });
-
-  tail_child.stdout.on('data', function(data) {
-    res.write(data);
-  });
-});
-*/
-/*
-if (!module.parent) {
-  app.listen(3001, 'logtail.node.benbuck.net');
-  //console.log("Express server listening on port %d", app.address().port);
-  //console.log(app.address());
-  console.log('Started');
-}
-*/
